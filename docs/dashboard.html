@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Greenbay BDR reach-out dashboard</title>
+<style>
+:root {
+  color-scheme: light dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--page);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+.viz-root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface-1: #fcfcfb;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --baseline: #c3c2b7;
+  --border: rgba(11,11,11,0.10);
+  --good: #0ca30c;
+  --success-text: #006300;
+  --warning: #fab219;
+  --critical: #d03b3b;
+  /* categorical slots */
+  --series-1: #2a78d6;  /* blue */
+  --series-2: #eb6834;  /* orange */
+  --series-3: #1baf7a;  /* aqua */
+  --series-4: #eda100;  /* yellow */
+  /* ordinal blue ramp for the funnel (light: no lighter than step 250) */
+  --funnel-1: #86b6ef;
+  --funnel-2: #5598e7;
+  --funnel-3: #3987e5;
+  --funnel-4: #2a78d6;
+  --funnel-5: #1c5cab;
+  --funnel-6: #184f95;
+  --funnel-7: #0d366b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .viz-root {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface-1: #1a1a19;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --baseline: #383835;
+    --border: rgba(255,255,255,0.10);
+    --good: #0ca30c;
+    --success-text: #0ca30c;
+    --warning: #fab219;
+    --critical: #d03b3b;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    /* ordinal blue ramp (dark: no darker than step 600) */
+    --funnel-1: #cde2fb;
+    --funnel-2: #9ec5f4;
+    --funnel-3: #86b6ef;
+    --funnel-4: #5598e7;
+    --funnel-5: #3987e5;
+    --funnel-6: #256abf;
+    --funnel-7: #184f95;
+  }
+}
+:root[data-theme="dark"] .viz-root {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface-1: #1a1a19;
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --muted: #898781;
+  --grid: #2c2c2a;
+  --baseline: #383835;
+  --border: rgba(255,255,255,0.10);
+  --good: #0ca30c;
+  --success-text: #0ca30c;
+  --warning: #fab219;
+  --critical: #d03b3b;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --funnel-1: #cde2fb;
+  --funnel-2: #9ec5f4;
+  --funnel-3: #86b6ef;
+  --funnel-4: #5598e7;
+  --funnel-5: #3987e5;
+  --funnel-6: #256abf;
+  --funnel-7: #184f95;
+}
+.wrap { max-width: 1040px; margin: 0 auto; padding: 24px 20px 64px; }
+header.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+.sub { color: var(--text-secondary); font-size: 13px; margin: 0; }
+.toggle {
+  border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary);
+  border-radius: 8px; padding: 7px 12px; font: inherit; font-size: 13px; cursor: pointer;
+}
+.banner {
+  margin: 18px 0 22px; border-radius: 10px; padding: 12px 16px;
+  background: color-mix(in srgb, var(--warning) 18%, var(--surface-1));
+  border: 1px solid color-mix(in srgb, var(--warning) 55%, var(--border));
+  color: var(--text-primary); font-size: 14px; line-height: 1.5;
+}
+.banner strong { letter-spacing: 0.02em; }
+.grid-kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 26px; }
+.tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.tile .label { color: var(--text-secondary); font-size: 12px; margin: 0 0 6px; }
+.tile .value { font-size: 30px; font-weight: 600; margin: 0; line-height: 1.1; }
+.tile .foot { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+section.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin-bottom: 22px; }
+section.card h2 { font-size: 16px; margin: 0 0 2px; }
+section.card .desc { color: var(--text-secondary); font-size: 13px; margin: 0 0 14px; }
+svg { max-width: 100%; height: auto; display: block; }
+.legend { display: flex; gap: 18px; flex-wrap: wrap; margin: 4px 0 12px; font-size: 13px; color: var(--text-secondary); }
+.legend .item { display: inline-flex; align-items: center; gap: 7px; }
+.legend .swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--grid); }
+th { color: var(--text-secondary); font-weight: 600; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; border: 1px solid var(--border); color: var(--text-secondary); }
+footer.foot { color: var(--muted); font-size: 12px; margin-top: 8px; line-height: 1.6; }
+a { color: var(--series-1); }
+</style>
+</head>
+<body>
+<div class="viz-root">
+  <div class="wrap">
+    <header class="top">
+      <div>
+        <h1>Greenbay BDR reach-out dashboard</h1>
+        <p class="sub">Generated 2026-09-16 08:44 &middot; source: sample_outreach.csv</p>
+      </div>
+      <button id="theme-toggle" class="toggle" type="button">Toggle light / dark</button>
+    </header>
+
+    <div class="banner" role="alert"><strong>SAMPLE DATA - NOT LIVE OUTREACH.</strong> Every number on this page is generated from illustrative sample rows (<code>sample_outreach.csv</code>) to demonstrate the dashboard. These are not real prospects, real sends, or real meetings. Do not read them as Greenbay performance. Live figures appear only once real Clay / Gmail / Calendar data is wired in (see docs/INTEGRATIONS.md).</div>
+
+    <div class="grid-kpi"><div class="tile"><p class="label">Contacts</p><p class="value">50</p><p class="foot">in the reach-out table</p></div><div class="tile"><p class="label">First-touches sent</p><p class="value">39</p><p class="foot">56 follow-ups</p></div><div class="tile"><p class="label">Reply rate</p><p class="value">48.7%</p><p class="foot">19 replies</p></div><div class="tile"><p class="label">Positive replies</p><p class="value">12</p><p class="foot">63.2% of replies</p></div><div class="tile"><p class="label">Meetings booked</p><p class="value">11</p><p class="foot">28.2% of first-touches</p></div><div class="tile"><p class="label">Intro meetings held</p><p class="value">5</p><p class="foot">45.5% show rate</p></div></div>
+
+    <section class="card">
+      <h2>Outreach funnel</h2>
+      <p class="desc">Contacts that reached each stage or beyond. Opens are intentionally
+      excluded: email opens are not reliably trackable, so no open rate is shown.</p>
+      <svg viewBox="0 0 720 318" role="img" aria-label="Outreach funnel by stage" font-family="system-ui, sans-serif"><text x="130" y="27.0" text-anchor="end" dominant-baseline="central" font-size="13" fill="var(--text-secondary)">Sourced</text><rect x="140" y="10" width="524.0" height="34" rx="4" fill="var(--funnel-1)"><title>Sourced: 50 contacts (100% of top of funnel)</title></rect><text x="672.0" y="27.0" dominant-baseline="central" font-size="13" font-weight="600" fill="var(--text-primary)">50</text><text x="130" y="71.0" text-anchor="end" dominant-baseline="central" font-size="13" fill="var(--text-secondary)">Enriched</text><rect x="140" y="54" width="471.6" height="34" rx="4" fill="var(--funnel-2)"><title>Enriched: 45 contacts (90% of top of funnel)</title></rect><text x="619.6" y="71.0" dominant-baseline="central" font-size="13" font-weight="600" fill="var(--text-primary)">45</text><text x="130" y="115.0" text-anchor="end" dominant-baseline="central" font-size="13" fill="var(--text-secondary)">First touch</text><rect x="140" y="98" width="408.7" height="34" rx="4" fill="var(--funnel-3)"><title>First touch: 39 contacts (78% of top of funnel)</title></rect><text x="556.7" y="115.0" dominant-baseline="central" font-size="13" font-weight="600" fill="var(--text-primary)">39</text><text x="130" y="159.0" text-anchor="end" dominant-baseline="central" font-size="13" fill="var(--text-secondary)">Followed up</text><rect x="140" y="142" width="324.9" height="34" rx="4" fill="var(--funnel-4)"><title>Followed up: 31 contacts (62% of top of funnel)</title></rect><text x="472.9" y="159.0" dominant-baseline="central" font-size="13" font-weight="600" fill="var(--text-primary)">31</text><text x="130" y="203.0" text-anchor="end" dominant-baseline="central" font-size="13" fill="var(--text-secondary)">Replied</text><rect x="140" y="186" width="199.1" height="34" rx="4" fill="var(--funnel-5)"><title>Replied: 19 contacts (38% of top of funnel)</title></rect><text x="347.1" y="203.0" dominant-baseline="central" font-size="13" font-weight="600" fill="var(--text-primary)">19</text><text x="130" y="247.0" text-anchor="end" dominant-baseline="central" font-size="13" fill="var(--text-secondary)">Meeting booked</text><rect x="140" y="230" width="115.3" height="34" rx="4" fill="var(--funnel-6)"><title>Meeting booked: 11 contacts (22% of top of funnel)</title></rect><text x="263.3" y="247.0" dominant-baseline="central" font-size="13" font-weight="600" fill="var(--text-primary)">11</text><text x="130" y="291.0" text-anchor="end" dominant-baseline="central" font-size="13" fill="var(--text-secondary)">Intro meeting held</text><rect x="140" y="274" width="52.4" height="34" rx="4" fill="var(--funnel-7)"><title>Intro meeting held: 5 contacts (10% of top of funnel)</title></rect><text x="200.4" y="291.0" dominant-baseline="central" font-size="13" font-weight="600" fill="var(--text-primary)">5</text></svg>
+    </section>
+
+    <section class="card">
+      <h2>Weekly trend</h2>
+      <p class="desc">First-touches sent and meetings booked per ISO week.</p>
+      <div class="legend"><span class="item"><span class="swatch" style="background:var(--series-1)"></span>First-touches sent</span><span class="item"><span class="swatch" style="background:var(--series-2)"></span>Meetings booked</span></div><svg viewBox="0 0 720 300" role="img" aria-label="Weekly first-touches and meetings booked" font-family="system-ui, sans-serif"><line x1="40" y1="254.0" x2="660" y2="254.0" stroke="var(--grid)" stroke-width="1"/><text x="32" y="254.0" text-anchor="end" dominant-baseline="central" font-size="11" fill="var(--muted)" font-variant-numeric="tabular-nums">0</text><line x1="40" y1="194.5" x2="660" y2="194.5" stroke="var(--grid)" stroke-width="1"/><text x="32" y="194.5" text-anchor="end" dominant-baseline="central" font-size="11" fill="var(--muted)" font-variant-numeric="tabular-nums">2</text><line x1="40" y1="135.0" x2="660" y2="135.0" stroke="var(--grid)" stroke-width="1"/><text x="32" y="135.0" text-anchor="end" dominant-baseline="central" font-size="11" fill="var(--muted)" font-variant-numeric="tabular-nums">5</text><line x1="40" y1="75.5" x2="660" y2="75.5" stroke="var(--grid)" stroke-width="1"/><text x="32" y="75.5" text-anchor="end" dominant-baseline="central" font-size="11" fill="var(--muted)" font-variant-numeric="tabular-nums">8</text><line x1="40" y1="16.0" x2="660" y2="16.0" stroke="var(--grid)" stroke-width="1"/><text x="32" y="16.0" text-anchor="end" dominant-baseline="central" font-size="11" fill="var(--muted)" font-variant-numeric="tabular-nums">10</text><text x="40.0" y="272" text-anchor="middle" font-size="11" fill="var(--muted)">W31</text><text x="128.6" y="272" text-anchor="middle" font-size="11" fill="var(--muted)">W32</text><text x="217.1" y="272" text-anchor="middle" font-size="11" fill="var(--muted)">W33</text><text x="305.7" y="272" text-anchor="middle" font-size="11" fill="var(--muted)">W34</text><text x="394.3" y="272" text-anchor="middle" font-size="11" fill="var(--muted)">W35</text><text x="482.9" y="272" text-anchor="middle" font-size="11" fill="var(--muted)">W36</text><text x="571.4" y="272" text-anchor="middle" font-size="11" fill="var(--muted)">W37</text><text x="660.0" y="272" text-anchor="middle" font-size="11" fill="var(--muted)">W38</text><polyline points="40.0,63.6 128.6,135.0 217.1,158.8 305.7,111.2 394.3,39.8 482.9,135.0 571.4,206.4 660.0,254.0" fill="none" stroke="var(--series-1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="40.0" cy="63.6" r="4" fill="var(--series-1)" stroke="var(--surface-1)" stroke-width="2"><title>2026-W31, First-touches: 8</title></circle><circle cx="128.6" cy="135.0" r="4" fill="var(--series-1)" stroke="var(--surface-1)" stroke-width="2"><title>2026-W32, First-touches: 5</title></circle><circle cx="217.1" cy="158.8" r="4" fill="var(--series-1)" stroke="var(--surface-1)" stroke-width="2"><title>2026-W33, First-touches: 4</title></circle><circle cx="305.7" cy="111.2" r="4" fill="var(--series-1)" stroke="var(--surface-1)" stroke-width="2"><title>2026-W34, First-touches: 6</title></circle><circle cx="394.3" cy="39.8" r="4" fill="var(--series-1)" stroke="var(--surface-1)" stroke-width="2"><title>2026-W35, First-touches: 9</title></circle><circle cx="482.9" cy="135.0" r="4" fill="var(--series-1)" stroke="var(--surface-1)" stroke-width="2"><title>2026-W36, First-touches: 5</title></circle><circle cx="571.4" cy="206.4" r="4" fill="var(--series-1)" stroke="var(--surface-1)" stroke-width="2"><title>2026-W37, First-touches: 2</title></circle><circle cx="660.0" cy="254.0" r="4" fill="var(--series-1)" stroke="var(--surface-1)" stroke-width="2"><title>2026-W38, First-touches: 0</title></circle><text x="668.0" y="254.0" dominant-baseline="central" font-size="12" font-weight="600" fill="var(--text-primary)">0</text><polyline points="40.0,254.0 128.6,254.0 217.1,230.2 305.7,206.4 394.3,182.6 482.9,254.0 571.4,158.8 660.0,230.2" fill="none" stroke="var(--series-2)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="40.0" cy="254.0" r="4" fill="var(--series-2)" stroke="var(--surface-1)" stroke-width="2"><title>2026-W31, Meetings booked: 0</title></circle><circle cx="128.6" cy="254.0" r="4" fill="var(--series-2)" stroke="var(--surface-1)" stroke-width="2"><title>2026-W32, Meetings booked: 0</title></circle><circle cx="217.1" cy="230.2" r="4" fill="var(--series-2)" stroke="var(--surface-1)" stroke-width="2"><title>2026-W33, Meetings booked: 1</title></circle><circle cx="305.7" cy="206.4" r="4" fill="var(--series-2)" stroke="var(--surface-1)" stroke-width="2"><title>2026-W34, Meetings booked: 2</title></circle><circle cx="394.3" cy="182.6" r="4" fill="var(--series-2)" stroke="var(--surface-1)" stroke-width="2"><title>2026-W35, Meetings booked: 3</title></circle><circle cx="482.9" cy="254.0" r="4" fill="var(--series-2)" stroke="var(--surface-1)" stroke-width="2"><title>2026-W36, Meetings booked: 0</title></circle><circle cx="571.4" cy="158.8" r="4" fill="var(--series-2)" stroke="var(--surface-1)" stroke-width="2"><title>2026-W37, Meetings booked: 4</title></circle><circle cx="660.0" cy="230.2" r="4" fill="var(--series-2)" stroke="var(--surface-1)" stroke-width="2"><title>2026-W38, Meetings booked: 1</title></circle><text x="668.0" y="230.2" dominant-baseline="central" font-size="12" font-weight="600" fill="var(--text-primary)">1</text></svg>
+    </section>
+
+    <section class="card">
+      <h2>By segment</h2>
+      <p class="desc">Contacts per segment, with the funnel detail beneath.</p>
+      <svg viewBox="0 0 720 180" role="img" aria-label="Contacts by segment" font-family="system-ui, sans-serif"><text x="160" y="27.0" text-anchor="end" dominant-baseline="central" font-size="12" fill="var(--text-secondary)">Transit / bus fleets</text><rect x="170" y="12" width="500.0" height="30" rx="4" fill="var(--series-1)"><title>Transit / bus fleets: 13 contacts, 10 first-touches, 3 meetings</title></rect><text x="678.0" y="27.0" dominant-baseline="central" font-size="12" font-weight="600" fill="var(--text-primary)">13</text><text x="160" y="69.0" text-anchor="end" dominant-baseline="central" font-size="12" fill="var(--text-secondary)">Logistics / last-mile</text><rect x="170" y="54" width="500.0" height="30" rx="4" fill="var(--series-2)"><title>Logistics / last-mile: 13 contacts, 10 first-touches, 3 meetings</title></rect><text x="678.0" y="69.0" dominant-baseline="central" font-size="12" font-weight="600" fill="var(--text-primary)">13</text><text x="160" y="111.0" text-anchor="end" dominant-baseline="central" font-size="12" fill="var(--text-secondary)">Municipal fleets</text><rect x="170" y="96" width="461.5" height="30" rx="4" fill="var(--series-3)"><title>Municipal fleets: 12 contacts, 9 first-touches, 2 meetings</title></rect><text x="639.5" y="111.0" dominant-baseline="central" font-size="12" font-weight="600" fill="var(--text-primary)">12</text><text x="160" y="153.0" text-anchor="end" dominant-baseline="central" font-size="12" fill="var(--text-secondary)">EV fleet operators</text><rect x="170" y="138" width="461.5" height="30" rx="4" fill="var(--series-4)"><title>EV fleet operators: 12 contacts, 10 first-touches, 3 meetings</title></rect><text x="639.5" y="153.0" dominant-baseline="central" font-size="12" font-weight="600" fill="var(--text-primary)">12</text></svg><div style="margin-top:14px"><table><thead><tr><th>Segment</th><th class="num">Contacts</th><th class="num">First-touches</th><th class="num">Replies</th><th class="num">Reply rate</th><th class="num">Meetings</th></tr></thead><tbody><tr><td>Transit / bus fleets</td><td class="num">13</td><td class="num">10</td><td class="num">5</td><td class="num">50.0%</td><td class="num">3</td></tr><tr><td>Logistics / last-mile</td><td class="num">13</td><td class="num">10</td><td class="num">5</td><td class="num">50.0%</td><td class="num">3</td></tr><tr><td>Municipal fleets</td><td class="num">12</td><td class="num">9</td><td class="num">4</td><td class="num">44.4%</td><td class="num">2</td></tr><tr><td>EV fleet operators</td><td class="num">12</td><td class="num">10</td><td class="num">5</td><td class="num">50.0%</td><td class="num">3</td></tr></tbody></table></div>
+    </section>
+
+    <section class="card">
+      <h2>Open follow-ups and next actions</h2>
+      <p class="desc">What needs a human next. Oren is only pulled in when an intro
+      meeting lands on his calendar (see docs/ARCHITECTURE.md).</p>
+      <table><thead><tr><th>Company</th><th>Contact</th><th>Segment</th><th>Stage</th><th>Next action</th><th class="num">As of</th></tr></thead><tbody><tr><td>Vector Last-Mile</td><td>Rowan Meyer</td><td>Logistics / last-mile</td><td><span class="pill">Meeting booked</span></td><td>Meeting booked, confirm and prep Oren</td><td class="num">2026-09-14</td></tr><tr><td>Depot9 Logistics</td><td>Taylor Silva</td><td>Logistics / last-mile</td><td><span class="pill">Followed up</span></td><td>No reply in 5 days, due for follow-up</td><td class="num">2026-09-11</td></tr><tr><td>Northgate Transit</td><td>Jordan Duarte</td><td>Transit / bus fleets</td><td><span class="pill">Followed up</span></td><td>No reply in 6 days, due for follow-up</td><td class="num">2026-09-10</td></tr><tr><td>Depot9 Logistics</td><td>Dana Garcia</td><td>Logistics / last-mile</td><td><span class="pill">Replied</span></td><td>Reply received, book the intro meeting</td><td class="num">2026-09-07</td></tr><tr><td>ZephyrEV Ops</td><td>Riley Bauer</td><td>EV fleet operators</td><td><span class="pill">First touch</span></td><td>No reply in 10 days, due for follow-up</td><td class="num">2026-09-06</td></tr><tr><td>AmpFleet</td><td>Drew Santos</td><td>EV fleet operators</td><td><span class="pill">Followed up</span></td><td>No reply in 12 days, due for follow-up</td><td class="num">2026-09-04</td></tr><tr><td>RapidBus Group</td><td>Avery Haddad</td><td>Transit / bus fleets</td><td><span class="pill">Followed up</span></td><td>No reply in 13 days, due for follow-up</td><td class="num">2026-09-03</td></tr><tr><td>Greenfield Municipal Services</td><td>Reese Garcia</td><td>Municipal fleets</td><td><span class="pill">Replied</span></td><td>Reply received, book the intro meeting</td><td class="num">2026-09-03</td></tr><tr><td>RapidBus Group</td><td>Cameron Ivanov</td><td>Transit / bus fleets</td><td><span class="pill">Replied</span></td><td>Reply received, book the intro meeting</td><td class="num">2026-08-31</td></tr><tr><td>SwiftDrop Delivery</td><td>Casey Bianchi</td><td>Logistics / last-mile</td><td><span class="pill">First touch</span></td><td>No reply in 16 days, due for follow-up</td><td class="num">2026-08-31</td></tr><tr><td>Summit Transit Authority</td><td>Sasha Duarte</td><td>Transit / bus fleets</td><td><span class="pill">Replied</span></td><td>Reply received, book the intro meeting</td><td class="num">2026-08-29</td></tr><tr><td>Port Harwell Authority</td><td>Skyler Okafor</td><td>Municipal fleets</td><td><span class="pill">Followed up</span></td><td>No reply in 18 days, due for follow-up</td><td class="num">2026-08-29</td></tr><tr><td>Harborview Coaches</td><td>Quinn Novak</td><td>Transit / bus fleets</td><td><span class="pill">Followed up</span></td><td>No reply in 19 days, due for follow-up</td><td class="num">2026-08-28</td></tr><tr><td>LastMile Co</td><td>Rowan Costa</td><td>Logistics / last-mile</td><td><span class="pill">Replied</span></td><td>Reply received, book the intro meeting</td><td class="num">2026-08-28</td></tr><tr><td>GridGo Fleets</td><td>Sam Santos</td><td>EV fleet operators</td><td><span class="pill">Meeting booked</span></td><td>Meeting booked, confirm and prep Oren</td><td class="num">2026-08-28</td></tr></tbody></table><p class="desc" style="margin-top:10px">Showing 15 of 32 open actions.</p>
+    </section>
+
+    <footer class="foot">
+      Greenbay is fleet orchestration: allocating future work, resolving real-time
+      operational failures, and retrospecting repeating issues. Electric is part of
+      that, not a charging product. This dashboard is scaffolding rendered from sample
+      data; it is not yet connected to live Clay, Gmail, or Google Calendar.
+    </footer>
+  </div>
+</div>
+<script>
+(function () {
+  var btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    var root = document.documentElement;
+    var cur = root.getAttribute('data-theme');
+    var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var isDark = cur ? cur === 'dark' : dark;
+    root.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  });
+})();
+</script>
+</body>
+</html>

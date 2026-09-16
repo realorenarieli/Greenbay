@@ -1,0 +1,61 @@
+# Daily reach-out dashboard.
+#
+# Regenerates docs/dashboard.html from data/sample_outreach.csv, optionally posts
+# a Slack summary, and commits the result back to this branch.
+#
+# HONEST NOTE: this uses SAMPLE data until real Clay/Gmail/Calendar data is wired
+# via secrets (see docs/INTEGRATIONS.md). Optional steps are guarded so the job
+# never fails just because a secret is missing. Standard-library Python only; no
+# pip install step is needed.
+
+name: daily-dashboard
+
+on:
+  schedule:
+    # 06:15 UTC every day. Adjust to Greenbay's timezone as needed.
+    - cron: "15 6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-dashboard-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build dashboard from sample data
+        run: python scripts/build_dashboard.py
+
+      - name: Post Slack summary (skipped if SLACK_WEBHOOK_URL is not set)
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
+            echo "SLACK_WEBHOOK_URL not set; skipping Slack post (no-op)."
+          else
+            python scripts/build_dashboard.py --slack
+          fi
+
+      - name: Commit regenerated dashboard
+        run: |
+          git config user.name "greenbay-bot"
+          git config user.email "bot@greenbay.solutions"
+          if git diff --quiet -- docs/dashboard.html; then
+            echo "No dashboard changes to commit."
+          else
+            git add docs/dashboard.html
+            git commit -m "chore: regenerate daily reach-out dashboard [skip ci]"
+            git push
+          fi
